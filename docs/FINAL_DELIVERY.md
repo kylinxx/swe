@@ -2,23 +2,23 @@
 
 ## 1. English Interview Script — 1 Minute
 
-“Hi, I built a lightweight coding agent from scratch. It talks to a language model, reads and edits local files, runs commands, and keeps iterating until the task is done.
+Hi, I built a lightweight coding agent from scratch. It talks to a language model, reads and edits local files, runs commands, and keeps iterating until the task is done.
 
 The project has four main parts: an OpenAI-compatible LLM client, a local tool layer, a conversation history manager, and a main execution loop. I also added a planning mode, so the agent can first produce a structured JSON plan and then execute step by step.
 
-For safety and reliability, I added workspace boundary checks, command timeouts, output truncation, and error reporting. For the demo, I used a small buggy calculator project, and the agent can find the bug, patch the code, rerun tests, and save a run report automatically.”
+For safety and reliability, I added workspace boundary checks, command timeouts, output truncation, and error reporting. In the demo, the agent works on a small buggy calculator project, finds the bug, patches the code, reruns tests, and saves a run report automatically.
 
 ## 2. English Interview Script — 3 Minutes
 
-“Hi, I built a coding agent from scratch as my software engineering project. The goal was to create a simplified version of tools like Claude Code or Codex: something that can reason with an LLM, use local tools, and complete real programming tasks.
+Hi, I built a coding agent from scratch as my software engineering project. My goal was to create a simplified version of tools like Claude Code or Codex: something that can reason with an LLM, use local tools, and complete real programming tasks.
 
 Architecturally, the project is split into four core layers. First, there is an OpenAI-compatible LLM client, so the agent can talk to any compatible model API. Second, there is a local toolbox that implements file reading, file writing, directory listing, text search, text replacement, and command execution. Third, there is a conversation history manager that trims context when the conversation gets long. Fourth, there is the main agent loop, which keeps calling the model, parsing tool calls, executing tools locally, and feeding the results back into the conversation.
 
-To make the agent more practical and easier to present, I added a planning mode. In that mode, the agent first generates a structured JSON plan with a goal, summary, steps, and notes. After that, it executes the task step by step. This makes the workflow much closer to a real coding assistant and it also helps with long or complex tasks.
+To make the agent more practical and easier to present, I added a planning mode. In that mode, the agent first generates a structured JSON plan with a goal, summary, steps, and notes. After that, it executes the task step by step. This makes the workflow much closer to a real coding assistant and also helps with long or complex tasks.
 
 I also focused on reliability and safety. The agent only works inside the configured workspace, so it cannot go outside the project directory. Commands have timeouts, outputs are truncated to avoid token explosion, and every run produces a report with the plan, tool trace, event log, and final answer. If something fails, it also saves a failure report, which makes debugging and demonstration much easier.
 
-For the demo, I used a small buggy calculator project. The agent reads the failing test, searches the codebase, patches the bug, reruns the test, and saves the run report automatically. I think this project shows the full agent loop: understanding the task, planning, tool use, execution, validation, and final reporting. That is the core capability I wanted to demonstrate.”
+For the demo, I used a small buggy calculator project. The agent reads the failing test, searches the codebase, patches the bug, reruns the test, and saves the run report automatically. I think this project shows the full agent loop: understanding the task, planning, tool use, execution, validation, and final reporting.
 
 ## 3. Final Submission Checklist
 
@@ -26,10 +26,10 @@ For the demo, I used a small buggy calculator project. The agent reads the faili
 - Full commit history preserved, with no history rewrite.
 - `README.txt` contains the repository URL, run instructions, and feature summary.
 - `demo_workspace/mini_buggy_app` is ready for the video demo.
-- `docs/VIDEO_SCRIPT_ZH.md` used as the recording outline.
-- `docs/INTERVIEW_SCRIPT_EN.md` or this file used for the interview explanation.
+- `docs/VIDEO_SCRIPT_ZH.md` is used as the recording outline.
+- `docs/INTERVIEW_SCRIPT_EN.md` or this file is used for the interview explanation.
 - Tests pass locally: `python -m unittest discover -s tests`.
-- No secrets committed in the repository, README, or video.
+- No secrets are committed in the repository, README, or video.
 
 ## 4. What to Show in the Video
 
@@ -46,7 +46,7 @@ For the demo, I used a small buggy calculator project. The agent reads the faili
 - Speed up boring command output if needed.
 - Do not show API keys or `.env` contents.
 - Use a stable demo task that finishes quickly.
-- If the model is slow, record a shorter “happy path” demo first, then splice the best parts.
+- If the model is slow, record a shorter happy-path demo first, then splice the best parts.
 
 ## 6. GitHub Push Guide
 
@@ -73,8 +73,7 @@ git branch -M main
 git push -u origin main
 ```
 
-If you want me to push for you, send me the GitHub repository URL first.  
-Then I can stage the final files, commit them, and push the branch.
+If you want me to push for you, send me the GitHub repository URL first. Then I can stage the final files, commit them, and push the branch.
 
 ## 7. Files Worth Highlighting
 
@@ -83,4 +82,3 @@ Then I can stage the final files, commit them, and push the branch.
 - `coding_agent/artifacts.py` — session reports and run logs.
 - `coding_agent/cli.py` — CLI entry and user-facing options.
 - `demo_workspace/mini_buggy_app/` — the recording demo target.
-

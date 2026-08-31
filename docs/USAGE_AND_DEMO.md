@@ -3,33 +3,43 @@
 ## 运行项目
 
 1. 设置环境变量：
-   - `OPENAI_API_KEY`
-   - 可选：`OPENAI_BASE_URL`
-   - 可选：`OPENAI_MODEL`
-2. 在仓库根目录执行：
-   - `python -m coding_agent "你的编程任务"`
-3. 如果任务较复杂，可加：
-   - `--plan`
-4. 若要切换工作区：
-   - `python -m coding_agent --cwd demo_workspace/mini_buggy_app "请修复测试失败的问题"`
+
+```bash
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=...
+OPENAI_MODEL=...
+```
+
+2. 在仓库根目录运行：
+
+```bash
+python -m coding_agent "请完成一个编程任务"
+```
+
+3. 如果要先看计划，再执行：
+
+```bash
+python -m coding_agent --plan "请修复 demo_workspace/mini_buggy_app 里的测试失败"
+```
+
+4. 如果要指定工作区：
+
+```bash
+python -m coding_agent --cwd demo_workspace/mini_buggy_app "请修复测试失败"
+```
 
 ## 推荐演示流程
 
-1. 先展示 `README.txt` 和项目结构。
-2. 再让 agent 在 `demo_workspace/mini_buggy_app` 中运行测试。
-3. 它会读 `calculator.py` 和 `test_calculator.py`，定位 `average()` 的 bug。
-4. 修复后再次运行测试，展示全绿结果。
-5. 如果要突出规划能力，可以先用 `--plan` 展示计划，再进入执行。
+1. 展示仓库结构。
+2. 展示 `docs/TECHNICAL_OVERVIEW.md` 中的架构图。
+3. 运行 agent，先生成计划。
+4. 展示它读取文件、搜索代码、修改文件、执行测试。
+5. 展示测试通过。
+6. 打开 `.coding-agent/runs/` 下的报告，说明它记录了全过程。
 
-## 2 分钟视频节奏
+## 安全提示
 
-- 0:00 - 0:20：项目目标与技术选型。
-- 0:20 - 1:20：agent 读文件、搜索、修改、执行测试。
-- 1:20 - 1:45：展示验证通过。
-- 1:45 - 2:00：总结“无框架、本地工具、闭环执行”。
-
-## 录制提醒
-
-- 不要展示 API Key。
-- 如果命令输出较长，可以适当加速。
-- 尽量选择稳定、可重复的修复任务。
+- 不要在视频里展示 API key。
+- 不要把 `.env` 内容录进去。
+- 演示任务要尽量稳定、短小、可重复。
+- 如果模型响应慢，可以提前录一遍，再剪辑成最终版。
