@@ -35,6 +35,23 @@
 4. 再运行测试，确认通过。
 5. 记录轮数、耗时和最终结果。
 
+## 自动跑脚本
+
+仓库根目录下的 `scripts/run_mini_benchmark.py` 可以自动：
+
+- 复制每个任务到临时目录
+- 先跑一次初始测试
+- 调用 `coding_agent` 修复任务
+- 再跑一次测试并统计结果
+
+用法示例：
+
+```bash
+python scripts/run_mini_benchmark.py
+```
+
+如果你还没设置 `OPENAI_API_KEY`，脚本会先提示你补环境变量，再正式跑评估。
+
 ## 任务列表
 
 | ID | 任务 | 主要考察点 |
