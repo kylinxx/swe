@@ -1,28 +1,28 @@
-# 编程智能体项目（Coding Agent）
+# 🤖 Coding Agent v1.0 — Build tasks with an agent
 
-Git 仓库地址：`https://github.com/kylinxx/swe.git`
+> 我从零实现了一个本地编程智能体：它会读代码、改文件、跑命令、做验证，并保存运行报告。目标是把“能分析、能动手、能复盘”的 agent 闭环做出来。
 
-> 这是一个我个人独立实现的轻量级 coding agent：它会和大模型交互，自动读写本地文件、执行命令，并在任务结束后生成运行报告。
+**GitHub**: `https://github.com/kylinxx/swe.git`
 
-## 项目简介
-这个项目不依赖现成 agent 框架，核心逻辑全部由我自己完成。目标是做一个“能分析、能动手、能验证”的本地编程智能体，适合课程考核和现场演示。
+## ✨ Highlights
+- **Agent loop** — model decision → tool execution → result feedback
+- **Local tools** — read, write, search, replace, list, run commands
+- **Safe workspace** — only works inside the configured project directory
+- **Run reports** — saves traces for review and defense
 
-## 核心亮点
-- 自己实现 OpenAI 兼容的模型调用
-- 自己实现本地工具层：读文件、写文件、目录浏览、全文搜索、精确替换、命令执行
-- 自己实现上下文管理，控制对话长度
-- 自己实现主循环：模型决策 → 工具执行 → 结果回传 → 继续迭代
-- 增加工作区边界保护、命令超时、输出截断和运行报告
-
-## 运行方式
+## 🚀 Quick start
 ```bash
-python -m coding_agent "请修复 demo_workspace/mini_buggy_app 里的测试失败"
+python -m coding_agent --plan --cwd demo_workspace/mini_buggy_app "请修复测试失败并说明原因"
 ```
 
-常用参数：
-- `--plan`：先生成计划，再执行
-- `--cwd`：指定工作区目录
-- `--no-record`：关闭运行报告保存
+## 🧪 Demo flow
+1. 让 agent 先读取失败测试。
+2. 自动定位 `calculator.py` 里的 bug。
+3. 修改代码并重新运行测试。
+4. 展示 `.coding-agent/runs/` 下的运行报告。
 
-## 演示路径
-推荐直接使用 `demo_workspace/mini_buggy_app`。先让 agent 读取测试失败信息，再自动修复代码，最后展示 `.coding-agent/runs/` 下生成的报告。
+## 📁 Key files
+- `coding_agent/agent.py` — main loop, planning mode, run artifacts
+- `coding_agent/tools.py` — local tools and workspace protection
+- `coding_agent/artifacts.py` — execution reports
+- `coding_agent/cli.py` — command-line entry point
