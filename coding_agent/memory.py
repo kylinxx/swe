@@ -31,6 +31,14 @@ def clip_text(text: str, max_chars: int) -> str:
     return f"{clipped}\n\n[输出已截断，原始长度 {len(text)} 字符]"
 
 
+def _first_nonempty_line(text: str) -> str:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return ""
+
+
 @dataclass
 class ConversationHistory:
     max_context_tokens: int
@@ -42,15 +50,46 @@ class ConversationHistory:
     def as_messages(self) -> list[dict[str, Any]]:
         return deepcopy(self.messages)
 
+    def compact_to_budget(self, *, keep_recent_messages: int = 8) -> bool:
+        if not self.messages:
+            return False
+        if sum(estimate_message_tokens(message) for message in self.messages) <= self.max_context_tokens:
+            return False
+
+        prefix = self._leading_system_messages()
+        body = self.messages[len(prefix) :]
+        if not body:
+            return False
+
+        for recent_count in range(min(keep_recent_messages, len(body)), 0, -1):
+            dropped = body[:-recent_count]
+            recent = body[-recent_count:]
+            candidate = list(prefix)
+            summary_text = self._build_summary(dropped)
+            if summary_text:
+                candidate.append({"role": "system", "content": summary_text})
+            candidate.extend(deepcopy(recent))
+            if sum(estimate_message_tokens(message) for message in candidate) <= self.max_context_tokens:
+                self.messages = candidate
+                return True
+
+        recent = [deepcopy(body[-1])]
+        candidate = list(prefix)
+        summary_text = self._build_summary(body[:-1])
+        if summary_text:
+            candidate.append({"role": "system", "content": summary_text})
+        candidate.extend(recent)
+        self.messages = candidate
+        return True
+
     def build_for_model(self) -> list[dict[str, Any]]:
         if not self.messages:
             return []
 
-        prefix: list[dict[str, Any]] = []
-        index = 0
-        while index < len(self.messages) and self.messages[index].get("role") in {"system", "developer"}:
-            prefix.append(deepcopy(self.messages[index]))
-            index += 1
+        self.compact_to_budget()
+
+        prefix = self._leading_system_messages()
+        index = len(prefix)
 
         body = self.messages[index:]
         total_budget = self.max_context_tokens
@@ -69,3 +108,45 @@ class ConversationHistory:
 
         return prefix + list(reversed(selected))
 
+    def _leading_system_messages(self) -> list[dict[str, Any]]:
+        prefix: list[dict[str, Any]] = []
+        for message in self.messages:
+            if message.get("role") not in {"system", "developer"}:
+                break
+            prefix.append(deepcopy(message))
+        return prefix
+
+    def _build_summary(self, messages: list[dict[str, Any]]) -> str:
+        if not messages:
+            return ""
+
+        bullets: list[str] = []
+        for message in messages:
+            role = message.get("role", "unknown")
+            content = message.get("content", "")
+            if isinstance(content, list):
+                content_text = "".join(str(item.get("text", "")) for item in content if isinstance(item, dict))
+            else:
+                content_text = str(content)
+
+            snippet = _first_nonempty_line(content_text)
+            if not snippet:
+                continue
+
+            if role == "user":
+                bullets.append(f"- 用户：{clip_text(snippet, 140)}")
+            elif role == "assistant":
+                bullets.append(f"- 助手：{clip_text(snippet, 140)}")
+            elif role == "tool":
+                name = str(message.get("name") or "tool")
+                bullets.append(f"- 工具 {name}：{clip_text(snippet, 140)}")
+
+            if len(bullets) >= 8:
+                break
+
+        if not bullets:
+            return ""
+
+        summary = ["【上下文压缩摘要】", f"已压缩 {len(messages)} 条历史消息："]
+        summary.extend(bullets)
+        return clip_text("\n".join(summary), 2000)

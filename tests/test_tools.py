@@ -27,6 +27,15 @@ class WorkspaceToolboxTests(unittest.TestCase):
             with self.assertRaises(WorkspaceAccessError):
                 toolbox.read_file({"path": "../escape.txt"})
 
+    def test_call_converts_workspace_errors_to_tool_results(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_root = Path(temp_dir)
+            toolbox = WorkspaceToolbox(workspace_root)
+            result = toolbox.call("read_file", {"path": "../escape.txt"})
+            self.assertFalse(result.success)
+            self.assertIn("工作区", result.content)
+            self.assertEqual(result.metadata["error_type"], "WorkspaceAccessError")
+
     def test_execute_command(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace_root = Path(temp_dir)

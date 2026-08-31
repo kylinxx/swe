@@ -205,7 +205,18 @@ class WorkspaceToolbox:
     def call(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         if name not in self._handlers:
             return ToolResult(False, f"未知工具：{name}", {"tool": name})
-        return self._handlers[name](arguments)
+        try:
+            result = self._handlers[name](arguments)
+        except WorkspaceAccessError as exc:
+            return ToolResult(False, str(exc), {"tool": name, "error_type": type(exc).__name__})
+        except (KeyError, TypeError, ValueError) as exc:
+            return ToolResult(False, f"工具参数错误：{exc}", {"tool": name, "error_type": type(exc).__name__})
+        except Exception as exc:  # pragma: no cover - guard rail for unexpected failures
+            return ToolResult(False, f"工具执行异常：{exc}", {"tool": name, "error_type": type(exc).__name__})
+
+        if not isinstance(result, ToolResult):
+            return ToolResult(False, "工具返回值格式错误", {"tool": name, "error_type": "InvalidReturn"})
+        return result
 
     def read_file(self, arguments: dict[str, Any]) -> ToolResult:
         path = _resolve_within_workspace(self.workspace_root, arguments["path"])
