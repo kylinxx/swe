@@ -6,28 +6,36 @@ import sys
 from pathlib import Path
 
 from .agent import CodingAgent
-from .config import AgentConfig, load_dotenv_if_present, normalize_base_url, resolve_workspace_root
+from .config import (
+    AgentConfig,
+    default_llm_settings,
+    load_dotenv_if_present,
+    normalize_base_url,
+    resolve_llm_runtime_config,
+    resolve_workspace_root,
+)
 from .llm import LLMClientError, OpenAICompatibleClient
 from .tools import WorkspaceToolbox
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
+    default_provider = os.getenv("MODEL_PROVIDER", "").strip().lower()
+    if default_provider not in {"openai", "deepseek"}:
+        default_provider = None
+    default_base_url, default_model = default_llm_settings(default_provider)
+
     parser = argparse.ArgumentParser(description="Run the coding agent on a local programming task.")
-    parser.add_argument("task", nargs="*", help="要交给智能体的编程任务")
-    parser.add_argument("--cwd", default=".", help="工作目录，默认当前目录")
-    parser.add_argument("--model", default=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"), help="模型名称")
-    parser.add_argument(
-        "--base-url",
-        default=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-        help="OpenAI 兼容接口地址",
-    )
-    parser.add_argument("--max-steps", type=int, default=12, help="最大推理循环次数")
-    parser.add_argument("--max-context-tokens", type=int, default=12000, help="上下文预算（近似 token）")
-    parser.add_argument("--temperature", type=float, default=0.2, help="采样温度")
-    parser.add_argument("--timeout-seconds", type=int, default=60, help="单次请求与命令超时")
-    parser.add_argument("--plan", action="store_true", help="先生成执行计划，再进入执行循环")
-    parser.add_argument("--no-record", action="store_true", help="不保存运行报告")
-    parser.add_argument("--report-dir", default=".coding-agent/runs", help="运行报告输出目录")
+    parser.add_argument("task", nargs="*", help="要交给智能体的编程任务。")
+    parser.add_argument("--cwd", default=".", help="工作目录，默认为当前目录。")
+    parser.add_argument("--model", default=default_model, help="模型名称。")
+    parser.add_argument("--base-url", default=default_base_url, help="OpenAI 兼容接口地址。")
+    parser.add_argument("--max-steps", type=int, default=12, help="最大推理循环次数。")
+    parser.add_argument("--max-context-tokens", type=int, default=12000, help="上下文预算（近似 token）。")
+    parser.add_argument("--temperature", type=float, default=0.2, help="采样温度。")
+    parser.add_argument("--timeout-seconds", type=int, default=60, help="单次请求与命令超时。")
+    parser.add_argument("--plan", action="store_true", help="先生成执行计划，再进入执行循环。")
+    parser.add_argument("--no-record", action="store_true", help="不保存运行报告。")
+    parser.add_argument("--report-dir", default=".coding-agent/runs", help="运行报告输出目录。")
     return parser
 
 
@@ -42,13 +50,14 @@ def main(argv: list[str] | None = None) -> int:
     if not task:
         parser.error("请提供一个编程任务，或通过标准输入传入任务说明。")
 
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    if not api_key:
-        parser.error("缺少环境变量 OPENAI_API_KEY。")
+    try:
+        llm_runtime = resolve_llm_runtime_config()
+    except ValueError as exc:
+        parser.error(str(exc))
 
     workspace_root = resolve_workspace_root(Path(args.cwd))
     config = AgentConfig(
-        api_key=api_key,
+        api_key=llm_runtime.api_key,
         model=args.model,
         base_url=normalize_base_url(args.base_url),
         workspace_root=workspace_root,
@@ -76,6 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     except (LLMClientError, RuntimeError) as exc:
         print(f"[error] {exc}", file=sys.stderr)
         return 1
+
     if result.plan is not None:
         print("=== PLAN ===")
         print(f"目标：{result.plan.goal}")
@@ -89,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
         for step in result.plan.steps:
             print(f"{step.id}. {step.task}（原因：{step.reason}）")
         print("=== RESULT ===")
+
     print(result.final_answer)
     if result.artifacts is not None:
         print(f"[saved report] {result.artifacts.markdown_path}")

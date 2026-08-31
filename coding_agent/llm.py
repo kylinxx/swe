@@ -49,13 +49,17 @@ class OpenAICompatibleClient:
             error_body = exc.read().decode("utf-8", errors="replace")
             hint = ""
             if exc.code == 404:
-                hint = "\n提示：请检查 `OPENAI_BASE_URL` 是否已经包含 `/v1`，以及接口是否支持 `/chat/completions`。"
+                hint = (
+                    "\n提示：请检查 `base_url` 是否正确。"
+                    "OpenAI 兼容接口通常使用 `https://api.openai.com/v1`，"
+                    "DeepSeek 的 OpenAI 兼容基地址通常使用 `https://api.deepseek.com`。"
+                )
             elif exc.code == 401:
-                hint = "\n提示：请检查 `OPENAI_API_KEY` 是否有效。"
+                hint = "\n提示：请检查 `api_key` 是否有效，或是否已绑定到对应平台。"
             raise LLMClientError(f"LLM 请求失败：{exc.code} {exc.reason}\n{error_body}{hint}") from exc
         except error.URLError as exc:
             raise LLMClientError(
-                f"无法连接到模型服务：{exc.reason}\n提示：请检查网络、`OPENAI_BASE_URL` 和代理设置。"
+                f"无法连接到模型服务：{exc.reason}\n提示：请检查网络、`base_url` 和代理配置。"
             ) from exc
 
         try:

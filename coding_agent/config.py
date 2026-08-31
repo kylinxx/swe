@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import os
-from urllib.parse import urlparse, urlunparse
 
 
 def load_dotenv_if_present(dotenv_path: Path | None = None) -> None:
@@ -38,15 +37,63 @@ class AgentConfig:
     timeout_seconds: int = 60
 
 
+@dataclass(frozen=True)
+class LLMRuntimeConfig:
+    provider: str
+    api_key: str
+    base_url: str
+    model: str
+
+
 def normalize_base_url(base_url: str) -> str:
-    cleaned = base_url.rstrip("/")
-    parsed = urlparse(cleaned)
-    if not parsed.scheme or not parsed.netloc:
-        return cleaned
-    if parsed.path in {"", "/"}:
-        parsed = parsed._replace(path="/v1")
-        return urlunparse(parsed)
-    return cleaned
+    return base_url.rstrip("/")
+
+
+def infer_model_provider() -> str:
+    provider = os.getenv("MODEL_PROVIDER", "").strip().lower()
+    if provider in {"openai", "deepseek"}:
+        return provider
+
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
+    if deepseek_key and not openai_key:
+        return "deepseek"
+    return "openai"
+
+
+def default_llm_settings(provider: str | None = None) -> tuple[str, str]:
+    resolved_provider = (provider or infer_model_provider()).strip().lower()
+    if resolved_provider == "deepseek":
+        return (
+            os.getenv("DEEPSEEK_BASE_URL", os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com")).strip(),
+            os.getenv("DEEPSEEK_MODEL", os.getenv("OPENAI_MODEL", "deepseek-v4-flash")).strip(),
+        )
+    return (
+        os.getenv("OPENAI_BASE_URL", os.getenv("DEEPSEEK_BASE_URL", "https://api.openai.com/v1")).strip(),
+        os.getenv("OPENAI_MODEL", os.getenv("DEEPSEEK_MODEL", "gpt-4.1-mini")).strip(),
+    )
+
+
+def resolve_llm_runtime_config() -> LLMRuntimeConfig:
+    provider = infer_model_provider()
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
+
+    if provider == "deepseek":
+        api_key = deepseek_key or openai_key
+    else:
+        api_key = openai_key or deepseek_key
+
+    if not api_key:
+        raise ValueError("缺少环境变量 OPENAI_API_KEY 或 DEEPSEEK_API_KEY。")
+
+    base_url, model = default_llm_settings(provider)
+    return LLMRuntimeConfig(
+        provider=provider,
+        api_key=api_key,
+        base_url=normalize_base_url(base_url),
+        model=model,
+    )
 
 
 def resolve_workspace_root(workspace_root: str | Path | None) -> Path:
