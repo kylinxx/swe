@@ -21,6 +21,12 @@
 python -m coding_agent --plan --cwd demo_workspace/mini_buggy_app "修复测试失败并说明原因"
 ```
 
+## 🖥️ 可视化演示
+```bash
+streamlit run streamlit_app.py
+```
+这个页面只是**演示层**，不会替代核心 agent 逻辑，适合答辩时展示交互过程。
+
 ## 🔑 DeepSeek 推荐配置
 ```env
 MODEL_PROVIDER=deepseek
