@@ -11,7 +11,13 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from coding_agent.config import resolve_llm_runtime_config
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from coding_agent.config import load_dotenv_if_present, resolve_llm_runtime_config
+
+load_dotenv_if_present(REPO_ROOT / ".env")
 
 
 @dataclass
@@ -99,7 +105,6 @@ def run_benchmark(
     timeout_seconds: int,
     report_path: Path | None,
 ) -> int:
-    repo_root = Path(__file__).resolve().parents[1]
     manifest = load_manifest(manifest_path)
     tasks = list(manifest.get("tasks", []))
     if task_filter:
@@ -122,13 +127,13 @@ def run_benchmark(
         temp_root = Path(tmp_dir_name)
         for index, task in enumerate(tasks, start=1):
             task_id = str(task["id"])
-            source_dir = (repo_root / str(task["workspace"])).resolve()
+            source_dir = (REPO_ROOT / str(task["workspace"])).resolve()
             task_dir = prepare_task_workspace(source_dir, temp_root, task_id)
             print(f"\n[{index}/{len(tasks)}] Running {task_id} in {task_dir}")
 
             initial_test = run_command(discover_tests_command(), task_dir, timeout_seconds)
             agent_command = build_agent_command(task_dir, str(task["prompt"]), use_plan=use_plan)
-            agent_run = run_command(agent_command, repo_root, timeout_seconds)
+            agent_run = run_command(agent_command, REPO_ROOT, timeout_seconds)
             final_test = run_command(discover_tests_command(), task_dir, timeout_seconds)
 
             initial_failed = initial_test.returncode != 0
@@ -220,13 +225,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    repo_root = Path(__file__).resolve().parents[1]
     manifest_path = Path(args.manifest)
     if not manifest_path.is_absolute():
-        manifest_path = (repo_root / manifest_path).resolve()
+        manifest_path = (REPO_ROOT / manifest_path).resolve()
     report_path = Path(args.report_path) if args.report_path else None
     if report_path is not None and not report_path.is_absolute():
-        report_path = (repo_root / report_path).resolve()
+        report_path = (REPO_ROOT / report_path).resolve()
     task_filter = set(args.task_ids) if args.task_ids else None
     return run_benchmark(
         manifest_path=manifest_path,

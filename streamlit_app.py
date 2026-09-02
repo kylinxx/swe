@@ -26,7 +26,7 @@ BENCHMARK_MANIFEST_PATH = REPO_ROOT / "benchmarks" / "mini_set" / "manifest.json
 BENCHMARK_REPORT_PATH = REPO_ROOT / "benchmarks" / "mini_set" / "results" / "latest.json"
 
 
-load_dotenv_if_present()
+load_dotenv_if_present(REPO_ROOT / ".env")
 st.set_page_config(page_title="Coding Agent Demo", page_icon="🤖", layout="wide")
 
 
@@ -175,6 +175,7 @@ with tab_agent:
                 with st.spinner("Agent 正在思考和执行中..."):
                     result = agent.run(task)
                 st.session_state["last_result"] = result
+                st.session_state["last_error"] = None
                 st.success("运行完成。")
             except (LLMClientError, RuntimeError, ValueError, OSError) as exc:
                 st.session_state["last_error"] = str(exc)
@@ -240,6 +241,7 @@ with tab_benchmark:
     report = load_json_file(BENCHMARK_REPORT_PATH)
 
     if manifest is not None:
+        task_count = len(manifest.get("tasks", []))
         st.caption(f"Benchmark manifest: {BENCHMARK_MANIFEST_PATH}")
         st.dataframe(
             [
@@ -254,9 +256,10 @@ with tab_benchmark:
             hide_index=True,
         )
     else:
+        task_count = 1
         st.warning("没有找到 benchmark manifest。")
 
-    benchmark_limit = st.slider("运行任务数量", min_value=1, max_value=5, value=5)
+    benchmark_limit = st.slider("运行任务数量", min_value=1, max_value=max(1, task_count), value=max(1, task_count))
     benchmark_plan_mode = st.checkbox("Benchmark 使用 plan mode", value=True)
     run_benchmark_clicked = st.button("运行 mini benchmark", type="primary")
 
