@@ -85,7 +85,7 @@ def resolve_llm_runtime_config() -> LLMRuntimeConfig:
         api_key = openai_key or deepseek_key
 
     if not api_key:
-        raise ValueError("缺少环境变量 OPENAI_API_KEY 或 DEEPSEEK_API_KEY。")
+        raise ValueError("缺少环境变量 `OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY`。")
 
     base_url, model = default_llm_settings(provider)
     return LLMRuntimeConfig(

@@ -11,6 +11,7 @@
 - **上下文压缩**：对话过长时自动保留关键系统信息并压缩历史
 - **运行留痕**：每次执行可生成报告，便于展示思路和排查问题
 - **双模型兼容**：OpenAI / DeepSeek 都可直接接入
+- **Baseline 验证页**：Streamlit 中可直接查看 mini benchmark 的修复前/修复后效果
 
 ## 🚀 一步运行
 1. 复制 `.env.example` 为 `.env`
@@ -25,7 +26,7 @@ python -m coding_agent --plan --cwd demo_workspace/mini_buggy_app "修复测试�
 ```bash
 streamlit run streamlit_app.py
 ```
-这个页面只是**演示层**，不会替代核心 agent 逻辑，适合答辩时展示交互过程。
+这个页面只是**演示层**，不会替代核心 agent 逻辑；其中的 baseline 页可以直接展示 benchmark 的验证效果。
 
 ## 🔑 DeepSeek 推荐配置
 ```env

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -11,6 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
 from typing import Any
+
+from coding_agent.config import resolve_llm_runtime_config
 
 
 @dataclass
@@ -24,7 +25,7 @@ class StepResult:
 def clip_text(text: str, max_chars: int = 2500) -> str:
     if len(text) <= max_chars:
         return text
-    return text[:max_chars] + f"\n\n[输出已截断，原始长度 {len(text)} 字符]"
+    return text[:max_chars] + f"\n\n[output clipped at {len(text)} characters]"
 
 
 def load_manifest(path: Path) -> dict[str, Any]:
@@ -70,11 +71,14 @@ def build_agent_command(task_dir: Path, prompt: str, *, use_plan: bool) -> list[
     return command
 
 
-def ensure_api_key_available() -> None:
-    if not os.getenv("OPENAI_API_KEY", "").strip():
+def ensure_runtime_config() -> tuple[str, str]:
+    try:
+        runtime = resolve_llm_runtime_config()
+    except ValueError as exc:
         raise SystemExit(
-            "缺少 OPENAI_API_KEY。请先设置环境变量后再运行完整 benchmark。"
-        )
+            "缺少可用的模型凭据。请先在 `.env` 中配置 `OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY`。"
+        ) from exc
+    return runtime.provider, runtime.model
 
 
 def prepare_task_workspace(source_dir: Path, temp_root: Path, task_id: str) -> Path:
@@ -110,7 +114,8 @@ def run_benchmark(
     if dry_run:
         return 0
 
-    ensure_api_key_available()
+    provider, model = ensure_runtime_config()
+    print(f"Using provider: {provider} | model: {model}")
 
     results: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory(prefix="coding-agent-benchmark-") as tmp_dir_name:
@@ -169,11 +174,15 @@ def run_benchmark(
             "tasks": results,
             "success_rate": sum(1 for item in results if item["final_passed"]) / max(1, len(results)),
             "total_tasks": len(results),
+            "initial_pass_rate": sum(1 for item in results if not item["initial_failed"]) / max(1, len(results)),
+            "provider": provider,
+            "model": model,
         }
 
         print("\nSummary")
         print(f"- Tasks: {summary['total_tasks']}")
         print(f"- Success rate: {summary['success_rate']:.0%}")
+        print(f"- Initial pass rate: {summary['initial_pass_rate']:.0%}")
 
         if report_path is not None:
             report_path.parent.mkdir(parents=True, exist_ok=True)
