@@ -36,6 +36,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--plan", action="store_true", help="先生成执行计划，再进入执行循环。")
     parser.add_argument("--no-record", action="store_true", help="不保存运行报告。")
     parser.add_argument("--report-dir", default=".coding-agent/runs", help="运行报告输出目录。")
+    parser.add_argument("--no-stream", action="store_true", help="关闭流式输出。")
     return parser
 
 
@@ -48,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
     if not task:
         task = sys.stdin.read().strip()
     if not task:
-        parser.error("请提供一个编程任务，或通过标准输入传入任务说明。")
+        parser.error("请提供一个编程任务，或者通过标准输入传入任务说明。")
 
     try:
         llm_runtime = resolve_llm_runtime_config()
@@ -80,11 +81,23 @@ def main(argv: list[str] | None = None) -> int:
         toolbox=WorkspaceToolbox(config.workspace_root),
     )
 
+    stream_enabled = not bool(args.no_stream)
+    stream_buffer: list[str] = []
+
+    def on_stream(chunk: str) -> None:
+        if not stream_enabled:
+            return
+        stream_buffer.append(chunk)
+        print(chunk, end="", flush=True)
+
     try:
-        result = agent.run(task)
+        result = agent.run(task, stream_callback=on_stream if stream_enabled else None)
     except (LLMClientError, RuntimeError) as exc:
         print(f"[error] {exc}", file=sys.stderr)
         return 1
+
+    if stream_enabled and stream_buffer:
+        print()
 
     if result.plan is not None:
         print("=== PLAN ===")
@@ -100,7 +113,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{step.id}. {step.task}（原因：{step.reason}）")
         print("=== RESULT ===")
 
-    print(result.final_answer)
+    if not stream_enabled:
+        print(result.final_answer)
     if result.artifacts is not None:
         print(f"[saved report] {result.artifacts.markdown_path}")
     return 0

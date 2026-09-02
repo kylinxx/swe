@@ -114,7 +114,9 @@ def run_benchmark(
 
     print(f"Loaded {len(tasks)} tasks from {manifest_path}")
     for task in tasks:
-        print(f"- {task['id']}: {task['name']} ({task['difficulty']})")
+        category = task.get("category", "")
+        category_suffix = f" [{category}]" if category else ""
+        print(f"- {task['id']}: {task['name']} ({task['difficulty']}){category_suffix}")
 
     if dry_run:
         return 0
@@ -143,6 +145,7 @@ def run_benchmark(
                 {
                     "task_id": task_id,
                     "name": task["name"],
+                    "category": task.get("category", ""),
                     "difficulty": task["difficulty"],
                     "initial_test": {
                         "returncode": initial_test.returncode,
@@ -182,6 +185,10 @@ def run_benchmark(
             "initial_pass_rate": sum(1 for item in results if not item["initial_failed"]) / max(1, len(results)),
             "provider": provider,
             "model": model,
+            "category_counts": {
+                category: sum(1 for item in results if item["category"] == category)
+                for category in sorted({str(item["category"]) for item in results if item.get("category")})
+            },
         }
 
         print("\nSummary")

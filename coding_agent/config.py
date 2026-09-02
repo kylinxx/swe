@@ -36,6 +36,8 @@ class AgentConfig:
     max_context_tokens: int = 12000
     temperature: float = 0.2
     timeout_seconds: int = 60
+    tool_retry_attempts: int = 2
+    json_retry_attempts: int = 2
 
 
 @dataclass(frozen=True)

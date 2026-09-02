@@ -1,10 +1,11 @@
 {
   "name": "coding-agent-mini-benchmark",
-  "version": 1,
+  "version": 2,
   "tasks": [
     {
       "id": "01_average_bug",
       "name": "Average calculation bug",
+      "category": "math",
       "workspace": "benchmarks/mini_set/01_average_bug",
       "prompt": "修复 average() 的计算错误，并确保测试通过。",
       "skills": ["read_file", "replace_text", "execute_command"],
@@ -13,6 +14,7 @@
     {
       "id": "02_word_count_bug",
       "name": "Word count bug",
+      "category": "text",
       "workspace": "benchmarks/mini_set/02_word_count_bug",
       "prompt": "修复 count_words() 的计数错误，并确保测试通过。",
       "skills": ["read_file", "search_text", "replace_text", "execute_command"],
@@ -21,26 +23,56 @@
     {
       "id": "03_todo_filter_bug",
       "name": "Todo filter bug",
+      "category": "filter",
       "workspace": "benchmarks/mini_set/03_todo_filter_bug",
-      "prompt": "修复 completed_titles() 的过滤逻辑错误，并确保测试通过。",
+      "prompt": "修复 completed_titles() 的过滤逻辑，并确保测试通过。",
       "skills": ["read_file", "replace_text", "execute_command"],
       "difficulty": "easy"
     },
     {
       "id": "04_dedupe_order_bug",
       "name": "Stable dedupe bug",
+      "category": "ordering",
       "workspace": "benchmarks/mini_set/04_dedupe_order_bug",
-      "prompt": "修复 unique_in_order() 的保序问题，并确保测试通过。",
+      "prompt": "修复 unique_in_order() 的顺序问题，并确保测试通过。",
       "skills": ["read_file", "replace_text", "execute_command"],
       "difficulty": "medium"
     },
     {
       "id": "05_grade_classifier_bug",
       "name": "Grade classifier bug",
+      "category": "classification",
       "workspace": "benchmarks/mini_set/05_grade_classifier_bug",
-      "prompt": "修复 letter_grade() 的阈值判断错误，并确保测试通过。",
+      "prompt": "修复 letter_grade() 的边界判断，并确保测试通过。",
       "skills": ["read_file", "replace_text", "execute_command"],
       "difficulty": "easy"
+    },
+    {
+      "id": "06_json_config_bug",
+      "name": "JSON config loader bug",
+      "category": "json",
+      "workspace": "benchmarks/mini_set/06_json_config_bug",
+      "prompt": "修复 load_config() 的 JSON 默认值和类型处理，并确保测试通过。",
+      "skills": ["read_file", "search_text", "replace_text", "execute_command"],
+      "difficulty": "medium"
+    },
+    {
+      "id": "07_safe_join_bug",
+      "name": "Safe join bug",
+      "category": "security",
+      "workspace": "benchmarks/mini_set/07_safe_join_bug",
+      "prompt": "修复 safe_join() 的路径穿越问题，并确保测试通过。",
+      "skills": ["read_file", "replace_text", "execute_command"],
+      "difficulty": "medium"
+    },
+    {
+      "id": "08_report_summary_bug",
+      "name": "Report summary bug",
+      "category": "reporting",
+      "workspace": "benchmarks/mini_set/08_report_summary_bug",
+      "prompt": "修复 build_summary() 的统计逻辑，并确保测试通过。",
+      "skills": ["read_file", "search_text", "replace_text", "execute_command"],
+      "difficulty": "medium"
     }
   ]
 }

@@ -135,7 +135,15 @@ class ArtifactWriter:
             lines.extend(["## Tool Trace", ""])
             for event in tool_events:
                 status = "OK" if event.get("success") else "FAIL"
-                lines.append(f"- [{status}] {event.get('name')} -> {event.get('summary')}")
+                attempts = int(event.get("attempts", 1))
+                lines.append(f"- [{status}] {event.get('name')} (attempts: {attempts}) -> {event.get('summary')}")
+                content = str(event.get("content") or "")
+                if content:
+                    lines.append("```text")
+                    lines.append(content[:1500])
+                    if len(content) > 1500:
+                        lines.append("[truncated]")
+                    lines.append("```")
             lines.append("")
         if event_log:
             lines.extend(["## Event Log", ""])

@@ -33,8 +33,17 @@ class WorkspaceToolboxTests(unittest.TestCase):
             toolbox = WorkspaceToolbox(workspace_root)
             result = toolbox.call("read_file", {"path": "../escape.txt"})
             self.assertFalse(result.success)
-            self.assertIn("工作区", result.content)
+            self.assertIn("Path escapes workspace", result.content)
             self.assertEqual(result.metadata["error_type"], "WorkspaceAccessError")
+
+    def test_call_rejects_invalid_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_root = Path(temp_dir)
+            toolbox = WorkspaceToolbox(workspace_root)
+            result = toolbox.call("read_file", {"path": "sample.txt", "unexpected": True})
+            self.assertFalse(result.success)
+            self.assertEqual(result.metadata["error_type"], "SchemaValidationError")
+            self.assertIn("unexpected properties", result.content)
 
     def test_execute_command(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -65,6 +74,7 @@ class WorkspaceToolboxTests(unittest.TestCase):
             self.assertTrue(result.success)
             self.assertEqual(file_path.read_text(encoding="utf-8"), "value = 2\n")
             self.assertIn("Diff", result.content)
+            self.assertIn("diff_preview", result.metadata)
 
 
 if __name__ == "__main__":

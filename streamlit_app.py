@@ -63,6 +63,7 @@ def benchmark_rows(report: dict[str, Any]) -> list[dict[str, Any]]:
             {
                 "Task": task.get("task_id", ""),
                 "Name": task.get("name", ""),
+                "Category": task.get("category", ""),
                 "Difficulty": task.get("difficulty", ""),
                 "Baseline Pass": "Yes" if not task.get("initial_failed") else "No",
                 "Final Pass": "Yes" if task.get("final_passed") else "No",
@@ -77,6 +78,7 @@ def summarize_report(report: dict[str, Any]) -> dict[str, float | int]:
     total = int(report.get("total_tasks", len(tasks)))
     final_passed = sum(1 for item in tasks if item.get("final_passed"))
     baseline_passed = sum(1 for item in tasks if not item.get("initial_failed"))
+    retries = sum(int(item.get("retry_count", 0)) for item in tasks)
     return {
         "total": total,
         "baseline_passed": baseline_passed,
@@ -84,6 +86,7 @@ def summarize_report(report: dict[str, Any]) -> dict[str, float | int]:
         "baseline_failures": total - baseline_passed,
         "improvement": final_passed - baseline_passed,
         "success_rate": float(report.get("success_rate", final_passed / max(1, total))),
+        "retries": retries,
     }
 
 
@@ -106,14 +109,35 @@ def run_benchmark(limit: int | None, use_plan: bool, report_path: Path) -> tuple
         encoding="utf-8",
         errors="replace",
     )
-    combined_output = "\n".join(
-        part for part in [completed.stdout.strip(), completed.stderr.strip()] if part
-    )
+    combined_output = "\n".join(part for part in [completed.stdout.strip(), completed.stderr.strip()] if part)
     return completed.returncode, combined_output
 
 
+def render_tool_trace(tool_events: list[dict[str, Any]]) -> None:
+    if not tool_events:
+        st.info("本次运行没有记录到工具调用。")
+        return
+
+    for index, event in enumerate(tool_events, start=1):
+        attempts = int(event.get("attempts", 1))
+        retry_count = int(event.get("retry_count", max(0, attempts - 1)))
+        title = f"{index}. {event.get('name', 'tool')} · {'成功' if event.get('success') else '失败'} · {attempts} 次尝试"
+        with st.container(border=True):
+            st.markdown(f"**{title}**")
+            st.write(f"Summary: {event.get('summary', '')}")
+            st.write(f"Retries: {retry_count}")
+            metadata = event.get("metadata") or {}
+            st.caption(json.dumps(metadata, ensure_ascii=False, indent=2, default=str))
+            content = str(event.get("content") or "")
+            if "diff_preview" in metadata:
+                st.subheader("Diff Preview")
+                st.code(str(metadata.get("diff_preview") or content), language="text")
+            else:
+                st.code(content or "[empty]", language="text")
+
+
 st.title("🤖 Coding Agent Demo")
-st.caption("coding agent 的可视化演示页；核心能力仍然是本地读写文件、执行命令和调用模型。")
+st.caption("一个可在本地读写文件、执行命令、调用模型并自动修复代码的编程智能体。")
 
 with st.sidebar:
     st.header("运行配置")
@@ -136,8 +160,8 @@ tab_agent, tab_benchmark = st.tabs(["Agent Demo", "Baseline Validation"])
 with tab_agent:
     st.subheader("任务")
     task = st.text_area(
-        "把你想让 agent 完成的编程任务写在这里",
-        value="修复 demo_workspace/mini_buggy_app 里的测试失败，并说明根因和修改点。",
+        "把你想让 agent 完成的编程任务写在这里。",
+        value="修复 demo_workspace/mini_buggy_app 里的测试失败，并说明原因和修改点。",
         height=140,
     )
 
@@ -172,13 +196,25 @@ with tab_agent:
                     toolbox=WorkspaceToolbox(config.workspace_root),
                 )
 
-                with st.spinner("Agent 正在思考和执行中..."):
-                    result = agent.run(task)
+                stream_placeholder = st.empty()
+                stream_chunks: list[str] = []
+
+                def on_stream(chunk: str) -> None:
+                    stream_chunks.append(chunk)
+                    stream_placeholder.markdown("**实时输出**\n\n" + "".join(stream_chunks) + "▌")
+
+                with st.spinner("Agent 正在思考和执行..."):
+                    result = agent.run(task, stream_callback=on_stream)
+                if stream_chunks:
+                    stream_placeholder.markdown("**实时输出**\n\n" + "".join(stream_chunks))
+                else:
+                    stream_placeholder.markdown("**实时输出**\n\n[无文本输出]")
                 st.session_state["last_result"] = result
                 st.session_state["last_error"] = None
                 st.success("运行完成。")
             except (LLMClientError, RuntimeError, ValueError, OSError) as exc:
                 st.session_state["last_error"] = str(exc)
+                st.session_state["last_result"] = None
                 st.error(str(exc))
 
     result = st.session_state.get("last_result")
@@ -194,7 +230,8 @@ with tab_agent:
             st.subheader("运行概况")
             st.metric("步数", result.steps)
             st.metric("历史消息", len(result.history))
-            st.metric("工具调用", len(result.events))
+            st.metric("工具调用", len(result.tool_events))
+            st.metric("重试次数", sum(int(item.get("retry_count", 0)) for item in result.tool_events))
             if result.artifacts is not None:
                 st.caption(f"报告：{result.artifacts.markdown_path}")
 
@@ -212,14 +249,14 @@ with tab_agent:
                     for step in result.plan.steps:
                         st.write(f"{step.id}. {step.task}（原因：{step.reason}）")
 
-        with st.expander("工具轨迹", expanded=False):
-            if result.events:
-                st.code(json.dumps(result.events, ensure_ascii=False, indent=2, default=str), language="json")
-            else:
-                st.info("这次运行没有记录到工具轨迹。")
+        st.subheader("工具轨迹")
+        render_tool_trace(result.tool_events)
 
         with st.expander("对话历史", expanded=False):
             st.code(json.dumps(result.history, ensure_ascii=False, indent=2, default=str), language="json")
+
+        with st.expander("运行事件", expanded=False):
+            st.code(json.dumps(result.events, ensure_ascii=False, indent=2, default=str), language="json")
 
         with st.expander("运行报告", expanded=False):
             if result.artifacts is not None:
@@ -228,13 +265,13 @@ with tab_agent:
                 st.info("当前没有保存报告。")
 
     if last_error and result is None:
-        st.info("先修正左侧配置，再点开始运行。")
+        st.info("先修正左侧配置，再点击开始运行。")
 
 with tab_benchmark:
     st.subheader("Baseline 验证")
     st.write(
-        "这里展示的是 mini benchmark 的验证效果：**Baseline** 表示原始有 bug 的代码，"
-        "**Final** 表示 agent 修复后的结果。"
+        "这里展示 mini benchmark 的验证结果：**Baseline** 是原始带 bug 的代码，"
+        "**Final** 是 agent 修复后的结果。"
     )
 
     manifest = load_json_file(BENCHMARK_MANIFEST_PATH)
@@ -248,6 +285,7 @@ with tab_benchmark:
                 {
                     "Task": task["id"],
                     "Name": task["name"],
+                    "Category": task.get("category", ""),
                     "Difficulty": task["difficulty"],
                 }
                 for task in manifest.get("tasks", [])
@@ -259,7 +297,7 @@ with tab_benchmark:
         task_count = 1
         st.warning("没有找到 benchmark manifest。")
 
-    benchmark_limit = st.slider("运行任务数量", min_value=1, max_value=max(1, task_count), value=max(1, task_count))
+    benchmark_limit = st.slider("运行任务数", min_value=1, max_value=max(1, task_count), value=max(1, task_count))
     benchmark_plan_mode = st.checkbox("Benchmark 使用 plan mode", value=True)
     run_benchmark_clicked = st.button("运行 mini benchmark", type="primary")
 
@@ -275,14 +313,14 @@ with tab_benchmark:
         if returncode == 0:
             st.success(f"Benchmark 已完成并保存到 {BENCHMARK_REPORT_PATH}")
         else:
-            st.warning("Benchmark 运行完成，但有任务未通过或中途失败。")
+            st.warning("Benchmark 运行完成，但有任务未通过。")
 
     if report is not None:
         summary = summarize_report(report)
-        left, right, extra = st.columns(3)
+        left, middle, right = st.columns(3)
         left.metric("Baseline 通过数", summary["baseline_passed"])
-        right.metric("Final 通过数", summary["final_passed"], delta=summary["improvement"])
-        extra.metric("Success Rate", f"{summary['success_rate']:.0%}")
+        middle.metric("Final 通过数", summary["final_passed"], delta=summary["improvement"])
+        right.metric("Success Rate", f"{summary['success_rate']:.0%}")
 
         st.progress(min(1.0, float(summary["success_rate"])))
         st.write(
@@ -296,6 +334,6 @@ with tab_benchmark:
             st.code(st.session_state.get(benchmark_output_key, ""), language="text")
     else:
         st.info(
-            "还没有 benchmark 报告。你可以先点上面的按钮运行一次，"
-            "生成 `benchmarks/mini_set/results/latest.json`，然后这里会自动展示 baseline 验证效果。"
+            "还没有 benchmark 报告。你可以先点上面的按钮跑一次，"
+            "生成 `benchmarks/mini_set/results/latest.json` 后这里会自动展示。"
         )
