@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import os
+from urllib.parse import urlparse, urlunparse
 
 
 def load_dotenv_if_present(dotenv_path: Path | None = None) -> None:
@@ -45,8 +46,19 @@ class LLMRuntimeConfig:
     model: str
 
 
-def normalize_base_url(base_url: str) -> str:
-    return base_url.rstrip("/")
+def normalize_base_url(base_url: str, provider: str | None = None) -> str:
+    cleaned = base_url.rstrip("/")
+    parsed = urlparse(cleaned)
+    if not parsed.scheme or not parsed.netloc:
+        return cleaned
+
+    resolved_provider = (provider or "").strip().lower()
+    if resolved_provider == "deepseek":
+        return cleaned
+    if resolved_provider == "openai" and parsed.path in {"", "/"}:
+        parsed = parsed._replace(path="/v1")
+        return urlunparse(parsed)
+    return cleaned
 
 
 def infer_model_provider() -> str:
@@ -91,7 +103,7 @@ def resolve_llm_runtime_config() -> LLMRuntimeConfig:
     return LLMRuntimeConfig(
         provider=provider,
         api_key=api_key,
-        base_url=normalize_base_url(base_url),
+        base_url=normalize_base_url(base_url, provider),
         model=model,
     )
 

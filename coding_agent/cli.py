@@ -40,7 +40,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    load_dotenv_if_present()
+    load_dotenv_if_present(Path(__file__).resolve().parents[1] / ".env")
     parser = build_argument_parser()
     args = parser.parse_args(argv)
 
@@ -59,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
     config = AgentConfig(
         api_key=llm_runtime.api_key,
         model=args.model,
-        base_url=normalize_base_url(args.base_url),
+        base_url=normalize_base_url(args.base_url, llm_runtime.provider),
         workspace_root=workspace_root,
         plan_mode=bool(args.plan),
         record_runs=not bool(args.no_record),

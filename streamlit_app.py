@@ -113,7 +113,7 @@ def run_benchmark(limit: int | None, use_plan: bool, report_path: Path) -> tuple
 
 
 st.title("🤖 Coding Agent Demo")
-st.caption("这是你自己实现的 coding agent 的可视化演示页；核心能力仍然是本地读写文件、执行命令和调用模型。")
+st.caption("coding agent 的可视化演示页；核心能力仍然是本地读写文件、执行命令和调用模型。")
 
 with st.sidebar:
     st.header("运行配置")
@@ -153,7 +153,7 @@ with tab_agent:
                 config = AgentConfig(
                     api_key=resolved_api_key,
                     model=resolved_model,
-                    base_url=normalize_base_url(resolved_base_url),
+                    base_url=normalize_base_url(resolved_base_url, provider),
                     workspace_root=workspace_root,
                     plan_mode=plan_mode,
                     record_runs=record_runs,

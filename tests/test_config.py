@@ -7,9 +7,10 @@ from coding_agent.config import default_llm_settings, infer_model_provider, norm
 
 
 class ConfigTests(unittest.TestCase):
-    def test_normalize_base_url_only_strips_trailing_slash(self) -> None:
-        self.assertEqual(normalize_base_url("https://api.openai.com/v1/"), "https://api.openai.com/v1")
-        self.assertEqual(normalize_base_url("https://api.deepseek.com/"), "https://api.deepseek.com")
+    def test_normalize_base_url_handles_openai_and_deepseek_differently(self) -> None:
+        self.assertEqual(normalize_base_url("https://api.openai.com", "openai"), "https://api.openai.com/v1")
+        self.assertEqual(normalize_base_url("https://api.openai.com/v1/", "openai"), "https://api.openai.com/v1")
+        self.assertEqual(normalize_base_url("https://api.deepseek.com/", "deepseek"), "https://api.deepseek.com")
 
     def test_default_llm_settings_prefers_openai_by_default(self) -> None:
         with patch.dict(
